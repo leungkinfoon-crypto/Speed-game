@@ -284,9 +284,20 @@
   }
 
   function clearLeaderboard() {
-    if(confirm("確定要清除所有排行榜紀錄嗎？呢個動作冇得返轉頭喎！")) {
-      localStorage.removeItem('speedGameLeaderboard');
-      showLeaderboard();
+    // 彈出密碼輸入框 (預設密碼係 8888，你可以喺下面自己改)
+    let pwd = prompt("🔒 教師專用：請輸入密碼以清除紀錄");
+    
+    if (pwd === "8888") {
+      if(confirm("✅ 密碼正確！確定要清除所有排行榜紀錄嗎？呢個動作冇得返轉頭喎！")) {
+        localStorage.removeItem('speedGameLeaderboard');
+        showLeaderboard();
+        alert("🗑️ 紀錄已經成功清除！");
+      }
+    } else if (pwd !== null && pwd !== "") {
+      // 如果打錯密碼 (且唔係撳咗取消)
+      alert("❌ 密碼錯誤！你無權限清除紀錄。");
+    }
+  }
     }
   }
 </script>
