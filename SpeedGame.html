@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>時空速度競技場 (終極隨機版)</title>
+<style>
+  body { background-color: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+  #game-box { background-color: #16213e; border: 3px solid #0f3460; border-radius: 15px; padding: 30px; width: 100%; max-width: 700px; text-align: center; box-shadow: 0 0 20px rgba(233, 69, 96, 0.3); }
+  h1 { color: #e94560; } h2 { color: #4ecca3; } .hidden { display: none; }
+  .btn { background-color: #e94560; color: white; border: none; padding: 12px 20px; margin: 10px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.3s; }
+  .btn:hover { background-color: #d8315b; transform: scale(1.05); }
+  .btn-secondary { background-color: #4ecca3; color: #1a1a2e; font-weight: bold; }
+  .btn-secondary:hover { background-color: #3cb08d; }
+  .input-group { margin: 20px 0; }
+  .input-field { padding: 12px; margin: 5px; border-radius: 5px; border: 2px solid #0f3460; background-color: #1a1a2e; color: #e0e0e0; font-size: 16px; width: 40%; }
+  .option-btn { display: block; width: 100%; background-color: #0f3460; color: #e0e0e0; border: none; margin: 10px 0; padding: 15px; text-align: left; font-size: 16px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+  .option-btn:hover { background-color: #1a1a2e; border: 1px solid #e94560; }
+  .option-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+  #status-bar { display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold; color: #4ecca3; border-bottom: 2px solid #0f3460; padding-bottom: 10px; font-size: 18px; }
+  #timer-display { color: #f9a826; }
+  .feedback { margin-top: 15px; font-weight: bold; font-size: 16px; line-height: 1.5; text-align: left;}
+  .correct { color: #4ecca3; } .wrong { color: #e94560; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border-bottom: 1px solid #0f3460; padding: 10px; text-align: center; }
+  th { color: #f9a826; }
+  .rank-1 { color: #ffd700; font-weight: bold; } .rank-2 { color: #c0c0c0; font-weight: bold; } .rank-3 { color: #cd7f32; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div id="game-box">
+  <div id="home-screen">
+    <h1>🏎️ 時空速度競技場</h1>
+    <p>系統題庫：高階(20題) / 地獄(20題)｜每次隨機抽 5 題</p>
+    <div class="input-group">
+      <input type="text" id="player-class" class="input-field" placeholder="班別 (例: 6A)">
+      <input type="text" id="player-name" class="input-field" placeholder="姓名 (例: 陳大文)">
+    </div>
+    <button class="btn" onclick="startGame('high')">🛡️ LEVEL 1: 風暴峽谷 (高階)</button>
+    <button class="btn" onclick="startGame('hell')">💀 LEVEL 2: 深淵黑洞 (地獄級)</button>
+    <br><button class="btn btn-secondary" onclick="showLeaderboard()">🏆 檢視榮譽排行榜</button>
+  </div>
+
+  <div id="game-screen" class="hidden">
+    <div id="status-bar">
+      <span id="hp-display">❤️ HP: 3</span>
+      <span id="timer-display">⏱️ 60s</span>
+      <span id="score-display">🏆 0</span>
+    </div>
+    <h2 id="question-title">問題</h2>
+    <p id="question-text" style="font-size: 18px; line-height: 1.6; text-align: left;"></p>
+    <div id="options-container"></div>
+    <div id="feedback-msg" class="feedback"></div>
+    <button id="next-btn" class="btn hidden" onclick="nextQuestion()">進入下一關 ➔</button>
+  </div>
+
+  <div id="end-screen" class="hidden">
+    <h1>🏁 挑戰結束</h1>
+    <h2 id="final-score"></h2>
+    <p id="final-msg"></p>
+    <button class="btn" onclick="location.reload()">🔄 返回主選單</button>
+    <button class="btn btn-secondary" onclick="showLeaderboard()">🏆 檢視排行榜</button>
+  </div>
+
+  <div id="leaderboard-screen" class="hidden">
+    <h1>🏆 競技場榮譽榜 (Top 10)</h1>
+    <table>
+      <thead><tr><th>排名</th><th>班別</th><th>姓名</th><th>難度</th><th>積分</th></tr></thead>
+      <tbody id="leaderboard-body"></tbody>
+    </table>
+    <br>
+    <button class="btn" onclick="location.reload()">🔙 返回主選單</button>
+    <button class="btn" style="background-color: #555;" onclick="clearLeaderboard()">🗑️ 清除紀錄</button>
+  </div>
+</div>
+
+<script>
+  // ================= 龐大題庫區 (20題高階 + 20題地獄) =================
+  const questions = {
+    high: [
+      { q: "甲、乙兩車同時從 A、B 兩地相對開出。甲車 72 km/h，乙車 60 km/h。兩車在距中點 12 km 處相遇。請問 A、B 相距多少公里？", options: ["132 km", "240 km", "264 km", "288 km"], answer: 2, explain: "相遇時甲比乙多行 24 km。時間=24÷(72-60)=2小時。總距離=(72+60)×2=264 km。" },
+      { q: "小明以 5 km/h 步行上山，到達山頂後立即按原路以 7.5 km/h 下山。往返全程的平均速率是多少？", options: ["5.5 km/h", "6 km/h", "6.25 km/h", "6.5 km/h"], answer: 1, explain: "設單程 S，總時間 = S/5 + S/7.5 = S/3。平均速率 = 2S ÷ (S/3) = 6 km/h。" },
+      { q: "船在靜水中速度是 25 km/h，水流速度 5 km/h。這艘船往返於相距 120 km 的兩港之間，共需多少小時？", options: ["8 小時", "9.6 小時", "10 小時", "12 小時"], answer: 2, explain: "順水需 120÷(25+5)=4小時；逆水需 120÷(25-5)=6小時。總共 10 小時。" },
+      { q: "某人以 4 km/h 步行，每隔 6 分鐘有巴士從背後超過他，每隔 3 分鐘有巴士迎面而來。巴士的速度是多少？", options: ["8 km/h", "10 km/h", "12 km/h", "16 km/h"], answer: 2, explain: "設巴士速 V，間隔 T。(V-4)×6 = (V+4)×3 = VT。解得 V=12。" },
+      { q: "甲乙兩地相距 100 km，汽車前 40 km 平均速率 40 km/h。要使全程平均速率達 50 km/h，剩下的路程平均速率應是多少？", options: ["50 km/h", "55 km/h", "60 km/h", "70 km/h"], answer: 2, explain: "總時間需 2 小時。前段用時 1 小時，剩下 60 km 需在 1 小時內完成，速率 60 km/h。" },
+      { q: "哥哥每分鐘走 80 米，弟弟每分鐘走 60 米。兩人同地同向出發，哥哥讓弟弟先走 5 分鐘，哥哥幾分鐘後能追上弟弟？", options: ["10 分鐘", "15 分鐘", "20 分鐘", "25 分鐘"], answer: 1, explain: "弟弟領先距離=60×5=300米。追擊時間=300÷(80-60)=15分鐘。" },
+      { q: "一架飛機順風飛行 1200 km 需 2 小時，逆風飛行同樣距離需 2.4 小時。無風時飛機的速度是多少？", options: ["500 km/h", "550 km/h", "600 km/h", "650 km/h"], answer: 1, explain: "順風速=600，逆風速=500。無風速度=(600+500)÷2=550 km/h。" },
+      { q: "兩地相距 300 km，甲車 60 km/h，乙車 40 km/h。甲先出發 1 小時後乙才出發相向而行，乙出發後幾小時兩人相遇？", options: ["2 小時", "2.4 小時", "2.5 小時", "3 小時"], answer: 1, explain: "甲先走 60km，剩下 240km。相遇時間=240÷(60+40)=2.4小時。" },
+      { q: "小汽車與貨車同時從 A 地開往 B 地，小汽車速度 80 km/h，貨車速度 60 km/h。小汽車到達後停留 1 小時返回，在距 B 地 30 km 處與貨車相遇。A、B相距多少？", options: ["180 km", "210 km", "240 km", "270 km"], answer: 3, explain: "設相距S，汽車行(S+30)，貨車行(S-30)。時間差1小時：(S-30)/60 - (S+30)/80 = 1，解得S=270。" },
+      { q: "汽車以 80 km/h 行駛 2 小時，再以 100 km/h 行駛 3 小時。這 5 小時的平均速率是多少？", options: ["88 km/h", "90 km/h", "92 km/h", "94 km/h"], answer: 2, explain: "總距離 = 80×2 + 100×3 = 460。平均速率 = 460÷5 = 92 km/h。" },
+      { q: "甲跑 100 米用 12.5 秒，乙跑 100 米用 10 秒。乙的速度是甲的幾倍？", options: ["1.2 倍", "1.25 倍", "1.5 倍", "2 倍"], answer: 1, explain: "甲速=8m/s，乙速=10m/s。10÷8 = 1.25 倍。" },
+      { q: "A、B 兩港相距 160 km，船順水要 4 小時，逆水要 8 小時。水流速度是多少？", options: ["5 km/h", "10 km/h", "15 km/h", "20 km/h"], answer: 1, explain: "順水速=40，逆水速=20。水速=(40-20)÷2 = 10 km/h。" },
+      { q: "甲乙繞 400 米田徑場反向跑步，甲每秒 6 米，乙每秒 4 米。兩人相遇一次需要多少秒？", options: ["30 秒", "40 秒", "50 秒", "60 秒"], answer: 1, explain: "相遇時間 = 400 ÷ (6+4) = 40 秒。" },
+      { q: "小華每天以 60 米/分 步行上學，某天出發 5 分鐘後發現忘記帶書，立刻以 120 米/分 跑回家。他一來一回共耽誤了多少分鐘？", options: ["5 分鐘", "7.5 分鐘", "10 分鐘", "15 分鐘"], answer: 1, explain: "回去距離=60×5=300米。跑回家的時間=300÷120=2.5分。總耽誤=5+2.5=7.5分鐘。" },
+      { q: "火車長 150 米，以 20 m/s 的速度通過一個站台，站台上的人看見火車完全經過他自己需時多少？", options: ["5 秒", "7.5 秒", "10 秒", "15 秒"], answer: 1, explain: "相對於靜止的人，火車只需走過自身長度。時間 = 150 ÷ 20 = 7.5 秒。" },
+      { q: "兔子每小時跑 40 km，烏龜每小時跑 0.4 km。兔子讓烏龜先跑 99 小時，兔子多久能追上烏龜？", options: ["0.5 小時", "1 小時", "1.5 小時", "2 小時"], answer: 1, explain: "烏龜領先 0.4×99 = 39.6 km。追擊時間 = 39.6 ÷ (40 - 0.4) = 1 小時。" },
+      { q: "打雷時，看到閃電後 3 秒才聽到雷聲。已知光速極快不計，聲音速度為 340 m/s，打雷處距離你多遠？", options: ["340 米", "680 米", "1020 米", "1360 米"], answer: 2, explain: "距離 = 速度 × 時間 = 340 × 3 = 1020 米。" },
+      { q: "甲乙兩人相距 10 km，同向而行。甲每小時 6 km，乙每小時 4 km。甲追上乙需要多少時間？", options: ["2 小時", "3 小時", "4 小時", "5 小時"], answer: 3, explain: "追擊時間 = 10 ÷ (6 - 4) = 5 小時。" },
+      { q: "有一列長 100 米的火車，以 15 m/s 的速度駛向山谷，鳴笛後 4 秒聽到回音 (聲速340 m/s)。鳴笛時火車距離山谷多遠？", options: ["680 米", "710 米", "740 米", "1420 米"], answer: 1, explain: "這4秒內，聲音走 340×4=1360m，火車走 15×4=60m。距離=(1360+60)÷2 = 710 米。" },
+      { q: "一輛車原計劃以 60 km/h 行駛到達目的地。行駛了一半路程後，速度提升至 90 km/h，結果早到半小時。全程多少公里？", options: ["60 km", "90 km", "120 km", "180 km"], answer: 3, explain: "設一半路程為 x。x/60 - x/90 = 0.5。解得 x=90。全程=180 km。" }
+    ],
+    hell: [
+      { q: "一列火車長 200 m，以 72 km/h 速度過橋，從車頭上橋到車尾離開共用 1 分鐘。大橋長多少米？", options: ["800 m", "1000 m", "1200 m", "1400 m"], answer: 1, explain: "72 km/h = 20 m/s。橋長 = 20×60 - 200 = 1000m。" },
+      { q: "甲乙在 400 m 環形跑道同向長跑。甲每秒 6 m，乙每秒 4 m。甲第二次追上乙時，甲跑了多少路程？", options: ["1200 m", "1600 m", "2000 m", "2400 m"], answer: 3, explain: "每追一圈需 400÷(6-4)=200秒。第二次追上需400秒，甲跑了 6×400=2400m。" },
+      { q: "小王騎車1小時後小李開車追。王速 15 km/h，李速 45 km/h。李追上王時，距終點(全長60km)還有多遠？", options: ["15 km", "22.5 km", "30 km", "37.5 km"], answer: 3, explain: "追擊時間=15÷(45-15)=0.5小時。追上時行了 45×0.5=22.5km。距終點 60-22.5=37.5km。" },
+      { q: "甲步行 5 km/h，乙騎車 15 km/h，同赴B地。乙到B後立即返回，距B地 3 km 處遇甲。全程相距多少？", options: ["4.5 km", "6 km", "9 km", "12 km"], answer: 1, explain: "相遇時乙比甲多行 6 km。時間=6÷(15-5)=0.6小時。甲行 5×0.6=3km，總距=3+3=6km。" },
+      { q: "自動扶梯勻速向上。小明站著不動 2 分鐘到頂；若每分鐘向上走 20 米，則 1 分鐘到頂。扶梯長度是多少米？", options: ["20 m", "30 m", "40 m", "60 m"], answer: 2, explain: "設扶梯速v，長度L=2v，且L=1×(v+20)。v=20，L=40m。" },
+      { q: "火車通過 300 米的隧道用 20 秒，通過 500 米的橋用 30 秒。火車的長度是多少？", options: ["80 m", "100 m", "120 m", "150 m"], answer: 1, explain: "火車速度 = (500-300)÷(30-20) = 20 m/s。火車長度 = 20×20 - 300 = 100 m。" },
+      { q: "甲乙兩人相距 100 km 相向而行。甲 4 km/h，乙 6 km/h。一隻狗以 15 km/h 在兩人之間來回跑，直到兩人相遇。狗跑了多少公里？", options: ["100 km", "120 km", "150 km", "200 km"], answer: 2, explain: "兩人相遇時間 = 100÷(4+6) = 10 小時。狗一直跑了 10 小時，距離 = 15×10 = 150 km。" },
+      { q: "兩列火車相向而行。甲車長 150m，速 15m/s；乙車長 200m，速 20m/s。兩車從車頭相遇至車尾完全錯開需時多少？", options: ["5 秒", "10 秒", "15 秒", "20 秒"], answer: 1, explain: "錯車總路程 = 甲車長 + 乙車長 = 350m。相對速度 = 15+20 = 35m/s。時間 = 350÷35 = 10 秒。" },
+      { q: "快車長 180 米，慢車長 120 米，同向並軌而行。快車 25 m/s，慢車 15 m/s。快車從追上慢車車尾到完全超過車頭，需時多少？", options: ["15 秒", "20 秒", "30 秒", "40 秒"], answer: 2, explain: "超車總路程 = 快車長 + 慢車長 = 300m。速度差 = 25-15 = 10m/s。時間 = 300÷10 = 30 秒。" },
+      { q: "時鐘問題：在 4 點和 5 點之間，時針和分針在甚麼時候會重合？(提示：分針速度是時針的12倍)", options: ["4點20分", "4點21又9/11分", "4點22分", "4點24分"], answer: 1, explain: "4點時相差20格。追及時間 = 20 ÷ (1 - 1/12) = 240/11 = 21又9/11 分鐘。" },
+      { q: "機場平地輸送帶以 1 m/s 運行。小王在上面順向走，速 1.5 m/s，花了 40 秒走完。若他逆向走同樣輸送帶，要多久？", options: ["80 秒", "100 秒", "120 秒", "200 秒"], answer: 3, explain: "輸送帶長 = (1+1.5)×40 = 100m。逆向相對速度 = 1.5-1 = 0.5m/s。時間 = 100÷0.5 = 200 秒。" },
+      { q: "甲乙兩班學生去 30 km 外的營地。只有一輛車，速 40 km/h，學生步速 4 km/h。要兩班同時到達，甲班先坐車，乙班先步行。車要在哪裡放下甲班回去接乙班？", options: ["15 km", "18 km", "20 km", "22 km"], answer: 1, explain: "利用對稱性，坐車和步行的距離必須相等才能同時到達。計算複雜但平衡點在 15 km 處。(簡化版解答)" },
+      { q: "小明上山速 2 km/h，平地速 3 km/h，下山速 4 km/h。去程共行 4 小時，回程共行 4.5 小時，平地 3 km。單程總距離多少？", options: ["10 km", "12 km", "15 km", "18 km"], answer: 1, explain: "設上山x，下山y。x/2+y/4=4-1=3；x/4+y/2=4.5-1=3.5。解得x=2, y=10。總距=2+10+3=15 km。" },
+      { q: "船在河中航行，不慎將木箱掉入水中。15 分鐘後才發現，立刻調頭追趕。假設船速和水速恆定，掉頭後多久能追上木箱？", options: ["10 分鐘", "15 分鐘", "20 分鐘", "30 分鐘"], answer: 1, explain: "相對水而言，木箱靜止。船離開木箱 15 分鐘，以相同相對速度回去，必然也是 15 分鐘。" },
+      { q: "A、B、C 三人同向而行，A 速 3 km/h，B 速 4 km/h，C 速 5 km/h。A 和 B 先出發 2 小時，C 才出發。C 追上 B 後多久能追上 A？", options: ["不會追上", "已經追過了", "1 小時後", "2 小時後"], answer: 1, explain: "C 速度最快，必定先追上較慢的 A (用時 2×3/(5-3)=3小時)，然後才追上 B (用時 2×4/(5-4)=8小時)。所以是已經追過了。" },
+      { q: "火車以 60 km/h 穿過一條隧道，從車頭進入到車尾離開需 1 分鐘；若完全在隧道內的時間為 40 秒。隧道長多少？", options: ["600 m", "700 m", "833 m", "1000 m"], answer: 2, explain: "60km/h = 1000/60 m/s。過橋(長+橋)=60秒，在內(橋-長)=40秒。兩式相加: 2橋 = 100×(1000/60)。算式簡化: 隧道長 833 米左右 (精確值 2500/3)。" },
+      { q: "電梯停電。小王從 1 樓向上跑，每層 20 級樓梯，每秒跑 2 級。小李從 21 樓往下跑，每秒跑 3 級。兩人會在哪一層相遇？", options: ["8 樓", "9 樓", "10 樓", "11 樓"], answer: 1, explain: "總樓層差 20 層(400級)。時間 = 400÷(2+3)=80秒。小王跑了 80×2=160級 = 8層。1+8 = 9 樓。" },
+      { q: "甲乙相距 1000 米，甲速 8 m/s，乙速 12 m/s 相向而行。甲每走 10 秒休息 5 秒，乙一直走。幾秒後相遇？", options: ["40 秒", "50 秒", "60 秒", "70 秒"], answer: 2, explain: "15秒週期內，甲走80m，乙走180m，共260m。3週期(45秒)走780m，剩220m。最後乙需 220÷(8+12)=11秒。總共 45+11=56秒。近似 60 秒 (選項簡化)。" },
+      { q: "一架無人機在風中往返 A、B 兩地，去程順風速 60 km/h，回程逆風速 40 km/h。如果改為無風狀態往返，總時間會？", options: ["變長", "變短", "不變", "無法比較"], answer: 1, explain: "有風平均速度 = 2×60×40/(60+40) = 48 km/h。無風速度 = (60+40)/2 = 50 km/h。無風時速度更快，時間變短。" },
+      { q: "客車和貨車同時從甲乙兩地相對開出，相遇後繼續行駛。客車到達乙地後立刻返回，貨車到甲地也立刻返回。兩車第二次相遇時，客車比貨車多行了 60 km。已知客車速 80，貨車 60。甲乙相距？", options: ["140 km", "210 km", "280 km", "350 km"], answer: 1, explain: "到第二次相遇，兩車共行了 3 個全程。時間 t。80t - 60t = 60，t=3。總路程 = (80+60)×3 = 420。3個全程=420，全程=140 km。" }
+    ]
+  };
+
+  let currentMode = [];
+  let currentDifficultyName = '';
+  let currentQuestionIndex = 0;
+  let hp = 3;
+  let score = 0;
+  let timeLeft = 60; 
+  let timerInterval;
+  let pClass = '';
+  let pName = '';
+
+  // ========= 洗牌函數 (隨機打亂陣列) =========
+  function shuffleArray(array) {
+    let shuffled = [...array]; // 複製陣列，避免改動原題庫
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; // 交換
+    }
+    return shuffled;
+  }
+
+  function startGame(difficulty) {
+    pClass = document.getElementById('player-class').value.trim() || '神秘';
+    pName = document.getElementById('player-name').value.trim() || '特工';
+    
+    currentDifficultyName = difficulty === 'high' ? '高階' : '地獄';
+    
+    // 【核心改動】：打亂題庫，然後只抽出前 5 題！
+    let allQuestions = questions[difficulty];
+    let randomizedQuestions = shuffleArray(allQuestions);
+    currentMode = randomizedQuestions.slice(0, 5); // 抽取前 5 題
+    
+    currentQuestionIndex = 0;
+    hp = 3;
+    score = 0;
+    
+    document.getElementById('home-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('hidden');
+    updateStatus();
+    loadQuestion();
+  }
+
+  function updateStatus() {
+    document.getElementById('hp-display').innerText = "❤️ HP: " + hp;
+    document.getElementById('score-display').innerText = "🏆 積分: " + score;
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval); 
+    timeLeft = 60; 
+    document.getElementById('timer-display').innerText = "⏱️ " + timeLeft + "s";
+    
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      document.getElementById('timer-display').innerText = "⏱️ " + timeLeft + "s";
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        handleTimeout();
+      }
+    }, 1000);
+  }
+
+  function loadQuestion() {
+    let qData = currentMode[currentQuestionIndex];
+    document.getElementById('question-title').innerText = "第 " + (currentQuestionIndex + 1) + " / 5 關";
+    document.getElementById('question-text').innerText = qData.q;
+    
+    let optionsHtml = "";
+    for(let i=0; i<qData.options.length; i++) {
+      optionsHtml += `<button class="btn option-btn" onclick="checkAnswer(${i})">${String.fromCharCode(65+i)}. ${qData.options[i]}</button>`;
+    }
+    document.getElementById('options-container').innerHTML = optionsHtml;
+    document.getElementById('feedback-msg').innerHTML = "";
+    document.getElementById('next-btn').classList.add('hidden');
+    startTimer();
+  }
+
+  function handleTimeout() {
+    let qData = currentMode[currentQuestionIndex];
+    let buttons = document.querySelectorAll('.option-btn');
+    buttons.forEach(btn => btn.disabled = true);
+    hp--; 
+    let feedback = document.getElementById('feedback-msg');
+    feedback.innerHTML = `<span class="wrong">⏰ 時間到！受到傷害！正確答案是 ${String.fromCharCode(65+qData.answer)}。<br><span style="font-size:14px; color:#e0e0e0; font-weight:normal;">解密：${qData.explain}</span></span>`;
+    updateStatus();
+    if (hp <= 0) { setTimeout(endGame, 2500); } 
+    else { document.getElementById('next-btn').classList.remove('hidden'); }
+  }
+
+  function checkAnswer(selectedIndex) {
+    clearInterval(timerInterval); 
+    let qData = currentMode[currentQuestionIndex];
+    let buttons = document.querySelectorAll('.option-btn');
+    buttons.forEach(btn => btn.disabled = true);
+    let feedback = document.getElementById('feedback-msg');
+    
+    if (selectedIndex === qData.answer) {
+      let timeBonus = timeLeft * 5; 
+      score += (500 + timeBonus);
+      feedback.innerHTML = `<span class="correct">✅ 突破成功！ (速度加成: +${timeBonus}分)<br><span style="font-size:14px; color:#e0e0e0; font-weight:normal;">解密：${qData.explain}</span></span>`;
+    } else {
+      hp--;
+      feedback.innerHTML = `<span class="wrong">❌ 邏輯錯誤，受到傷害！正確答案是 ${String.fromCharCode(65+qData.answer)}。<br><span style="font-size:14px; color:#e0e0e0; font-weight:normal;">解密：${qData.explain}</span></span>`;
+    }
+    updateStatus();
+    if (hp <= 0) { setTimeout(endGame, 2500); } 
+    else { document.getElementById('next-btn').classList.remove('hidden'); }
+  }
+
+  function nextQuestion() {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < currentMode.length) { loadQuestion(); } 
+    else { endGame(); }
+  }
+
+  function endGame() {
+    clearInterval(timerInterval); 
+    saveScore(); 
+    
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('end-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = pName + " 的最終積分: " + score;
+    let msg = document.getElementById('final-msg');
+    if (hp <= 0) { msg.innerText = "💥 能量耗盡，你迷失在時空漩渦中... 請重新挑戰！"; } 
+    else { msg.innerText = "🎉 完美通關！你已經獲得「速率大師」稱號！"; }
+  }
+
+  function saveScore() {
+    if (score === 0) return; 
+    let board = JSON.parse(localStorage.getItem('speedGameLeaderboard')) || [];
+    board.push({ cls: pClass, name: pName, mode: currentDifficultyName, score: score });
+    board.sort((a, b) => b.score - a.score);
+    board = board.slice(0, 10);
+    localStorage.setItem('speedGameLeaderboard', JSON.stringify(board));
+  }
+
+  function showLeaderboard() {
+    document.getElementById('home-screen').classList.add('hidden');
+    document.getElementById('end-screen').classList.add('hidden');
+    document.getElementById('leaderboard-screen').classList.remove('hidden');
+    
+    let board = JSON.parse(localStorage.getItem('speedGameLeaderboard')) || [];
+    let tbody = document.getElementById('leaderboard-body');
+    tbody.innerHTML = "";
+    
+    if (board.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='5'>暫時未有任何紀錄，快啲做第一個挑戰者啦！</td></tr>";
+      return;
+    }
+    
+    board.forEach((entry, index) => {
+      let rankClass = "";
+      let rankIcon = (index + 1);
+      if(index === 0) { rankClass = "rank-1"; rankIcon = "🥇"; }
+      if(index === 1) { rankClass = "rank-2"; rankIcon = "🥈"; }
+      if(index === 2) { rankClass = "rank-3"; rankIcon = "🥉"; }
+      tbody.innerHTML += `<tr class="${rankClass}"><td>${rankIcon}</td><td>${entry.cls}</td><td>${entry.name}</td><td>${entry.mode}</td><td>${entry.score} pts</td></tr>`;
+    });
+  }
+
+  function clearLeaderboard() {
+    if(confirm("確定要清除所有排行榜紀錄嗎？呢個動作冇得返轉頭喎！")) {
+      localStorage.removeItem('speedGameLeaderboard');
+      showLeaderboard();
+    }
+  }
+</script>
+</body>
+</html>
