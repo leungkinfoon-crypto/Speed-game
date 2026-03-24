@@ -249,7 +249,8 @@
     if (hp <= 0) { msg.innerText = "💥 能量耗盡，你迷失在時空漩渦中... 請重新挑戰！"; } 
     else { msg.innerText = "🎉 完美通關！你已經獲得「速率大師」稱號！"; }
   }
-function saveScore() {
+
+  function saveScore() {
     if (score === 0) return; 
     let board = JSON.parse(localStorage.getItem('speedGameLeaderboard')) || [];
     board.push({ cls: pClass, name: pName, mode: currentDifficultyName, score: score });
@@ -257,7 +258,7 @@ function saveScore() {
     board = board.slice(0, 10);
     localStorage.setItem('speedGameLeaderboard', JSON.stringify(board));
   }
-
+  const API_URL = "https://script.google.com/macros/s/你的專屬超長代碼/exec";
   function showLeaderboard() {
     document.getElementById('home-screen').classList.add('hidden');
     document.getElementById('end-screen').classList.add('hidden');
