@@ -249,52 +249,66 @@
     if (hp <= 0) { msg.innerText = "💥 能量耗盡，你迷失在時空漩渦中... 請重新挑戰！"; } 
     else { msg.innerText = "🎉 完美通關！你已經獲得「速率大師」稱號！"; }
   }
+const API_URL = "https://script.google.com/macros/s/AKfycbw6ut_RI55WCvxRhf_mOWY7P9azc7BkeOUtlW9ILevHijdgNT-hJofPLQQKm6GX7OOuyA/exec";
 
   function saveScore() {
     if (score === 0) return; 
-    let board = JSON.parse(localStorage.getItem('speedGameLeaderboard')) || [];
-    board.push({ cls: pClass, name: pName, mode: currentDifficultyName, score: score });
-    board.sort((a, b) => b.score - a.score);
-    board = board.slice(0, 10);
-    localStorage.setItem('speedGameLeaderboard', JSON.stringify(board));
+    let data = { action: "add", cls: pClass, name: pName, mode: currentDifficultyName, score: score };
+    
+    // 傳送分數上 Google Sheets
+    fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      mode: 'no-cors' 
+    }).then(res => console.log("分數發送請求已送出!"))
+      .catch(err => console.error("上傳失敗", err));
   }
-  const API_URL = "https://script.google.com/macros/s/AKfycbw6ut_RI55WCvxRhf_mOWY7P9azc7BkeOUtlW9ILevHijdgNT-hJofPLQQKm6GX7OOuyA/exec";
+
   function showLeaderboard() {
     document.getElementById('home-screen').classList.add('hidden');
     document.getElementById('end-screen').classList.add('hidden');
     document.getElementById('leaderboard-screen').classList.remove('hidden');
     
-    let board = JSON.parse(localStorage.getItem('speedGameLeaderboard')) || [];
     let tbody = document.getElementById('leaderboard-body');
-    tbody.innerHTML = "";
+    tbody.innerHTML = "<tr><td colspan='5'>🔄 努力連線雲端讀取中...</td></tr>";
     
-    if (board.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='5'>暫時未有任何紀錄，快啲做第一個挑戰者啦！</td></tr>";
-      return;
-    }
-    
-    board.forEach((entry, index) => {
-      let rankClass = "";
-      let rankIcon = (index + 1);
-      if(index === 0) { rankClass = "rank-1"; rankIcon = "🥇"; }
-      if(index === 1) { rankClass = "rank-2"; rankIcon = "🥈"; }
-      if(index === 2) { rankClass = "rank-3"; rankIcon = "🥉"; }
-      tbody.innerHTML += `<tr class="${rankClass}"><td>${rankIcon}</td><td>${entry.cls}</td><td>${entry.name}</td><td>${entry.mode}</td><td>${entry.score} pts</td></tr>`;
-    });
+    // 從 Google Sheets 讀取 Top 10
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(board => {
+        tbody.innerHTML = "";
+        if (board.length === 0) {
+          tbody.innerHTML = "<tr><td colspan='5'>暫時未有任何紀錄，快啲做第一個挑戰者啦！</td></tr>";
+          return;
+        }
+        board.forEach((entry, index) => {
+          let rankClass = "";
+          let rankIcon = (index + 1);
+          if(index === 0) { rankClass = "rank-1"; rankIcon = "🥇"; }
+          if(index === 1) { rankClass = "rank-2"; rankIcon = "🥈"; }
+          if(index === 2) { rankClass = "rank-3"; rankIcon = "🥉"; }
+          tbody.innerHTML += `<tr class="${rankClass}"><td>${rankIcon}</td><td>${entry.cls}</td><td>${entry.name}</td><td>${entry.mode}</td><td>${entry.score} pts</td></tr>`;
+        });
+      })
+      .catch(err => {
+        tbody.innerHTML = "<tr><td colspan='5'>❌ 雲端讀取失敗，請檢查網絡連線或 API 網址。</td></tr>";
+      });
   }
 
   function clearLeaderboard() {
-    // 彈出密碼輸入框 (預設密碼係 8888，你可以喺下面自己改)
-    let pwd = prompt("🔒 教師專用：請輸入密碼以清除紀錄");
-    
+    let pwd = prompt("🔒 教師專用：請輸入密碼以清除雲端紀錄");
     if (pwd === "8888") {
-      if(confirm("✅ 密碼正確！確定要清除所有排行榜紀錄嗎？呢個動作冇得返轉頭喎！")) {
-        localStorage.removeItem('speedGameLeaderboard');
-        showLeaderboard();
-        alert("🗑️ 紀錄已經成功清除！");
+      if(confirm("✅ 密碼正確！確定要清除雲端所有紀錄嗎？(Google Sheet入面嘅數據會被刪除)")) {
+        fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: "clear" }),
+          mode: 'no-cors'
+        }).then(() => {
+          alert("🗑️ 雲端紀錄清除指令已發送！請稍候再重整排行榜。");
+          showLeaderboard();
+        });
       }
     } else if (pwd !== null && pwd !== "") {
-      // 如果打錯密碼 (且唔係撳咗取消)
       alert("❌ 密碼錯誤！你無權限清除紀錄。");
     }
   }
