@@ -13,7 +13,6 @@
   .btn-secondary { background-color: #4ecca3; color: #1a1a2e; font-weight: bold; }
   .btn-secondary:hover { background-color: #3cb08d; }
   .input-group { margin: 20px 0; display: flex; justify-content: center; gap: 10px; }
-  /* 下拉選單樣式優化 */
   .input-field { padding: 12px; border-radius: 5px; border: 2px solid #0f3460; background-color: #1a1a2e; color: #e0e0e0; font-size: 16px; width: 45%; cursor: pointer; }
   .option-btn { display: block; width: 100%; background-color: #0f3460; color: #e0e0e0; border: none; margin: 10px 0; padding: 15px; text-align: left; font-size: 16px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
   .option-btn:hover { background-color: #1a1a2e; border: 1px solid #e94560; }
@@ -47,7 +46,7 @@
 
       <select id="player-name" class="input-field">
         <option value="" disabled selected>選擇號數</option>
-        </select>
+      </select>
     </div>
 
     <button class="btn" onclick="startGame('high')">🛡️ LEVEL 1: 高階</button>
@@ -89,9 +88,9 @@
 </div>
 
 <script>
-  // 自動生成 1-37 號選單
+  // 自動生成 1-36 號選單 (i <= 36)
   const nameSelect = document.getElementById('player-name');
-  for (let i = 1; i <= 37; i++) {
+  for (let i = 1; i <= 36; i++) {
     let opt = document.createElement('option');
     opt.value = i + "號";
     opt.innerHTML = i + " 號";
@@ -136,6 +135,7 @@
   let pClass = '';
   let pName = '';
 
+  // 保持你之前的 API URL 
   const API_URL = "https://script.google.com/macros/s/AKfycbw6ut_RI55WCvxRhf_mOWY7P9azc7BkeOUtlW9ILevHijdgNT-hJofPLQQKm6GX7OOuyA/exec";
 
   function shuffleArray(array) {
@@ -151,7 +151,6 @@
     pClass = document.getElementById('player-class').value;
     pName = document.getElementById('player-name').value;
 
-    // 檢查有沒有選好班別和號數
     if (!pClass || !pName) {
       alert("⚠️ 請先選擇班別及號數！");
       return;
